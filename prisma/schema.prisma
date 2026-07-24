@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CLIENT
+  PRO
+}
+
+enum MilestoneStatus {
+  DRAFT
+  FUNDED
+  RELEASED
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  name                String
+  role                Role
+  email               String   @unique
+  stripeAccountId     String?
+  stripeOnboarded     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  gigsAsClient        Gig[]        @relation("ClientGigs")
+  gigsAsPro           Gig[]        @relation("ProGigs")
+
+  @@map("users")
+}
+
+model Gig {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  clientId    String
+  client      User        @relation("ClientGigs", fields: [clientId], references: [id])
+  proId       String?
+  pro         User?       @relation("ProGigs", fields: [proId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  milestones  Milestone[]
+
+  @@map("gigs")
+}
+
+model Milestone {
+  id                    String          @id @default(cuid())
+  gigId                 String
+  gig                   Gig             @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  title                 String
+  amountCents           Int
+  platformFeeBps        Int             @default(1000) // 10.00%
+  status                MilestoneStatus @default(DRAFT)
+  stripeCheckoutId      String?
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+  fundedAt              DateTime?
+  releasedAt            DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  events                MilestoneEvent[]
+
+  @@map("milestones")
+}
+
+model MilestoneEvent {
+  id          String    @id @default(cuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  type        String
+  detail      String
+  createdAt   DateTime  @default(now())
+
+  @@map("milestone_events")
+}
