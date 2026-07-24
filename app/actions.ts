@@ -141,10 +141,8 @@ export async function checkProOnboardingStatus(proId: string) {
   const pro = await prisma.user.findUniqueOrThrow({ where: { id: proId } });
   if (!pro.stripeAccountId) return false;
 
-  const account = await stripe.v2.core.accounts.retrieve(pro.stripeAccountId);
-  const transfersCapability =
-    account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers;
-  const active = transfersCapability?.status === 'active';
+  const account = await stripe.accounts.retrieve(pro.stripeAccountId);
+  const active = account.capabilities?.transfers === 'active';
 
   if (active && !pro.stripeOnboarded) {
     await prisma.user.update({ where: { id: proId }, data: { stripeOnboarded: true } });

@@ -1,29 +1,23 @@
 import { stripe } from '@/lib/stripe';
 
 export async function createRecipientAccount(email: string, displayName: string) {
-  const account = await stripe.v2.core.accounts.create({
-    contact_email: email,
-    display_name: displayName,
-    dashboard: 'express',
-    identity: {
-      country: 'US',
-      entity_type: 'individual',
+  const account = await stripe.accounts.create({
+    country: 'US',
+    email,
+    business_type: 'individual',
+    business_profile: {
+      name: displayName,
+      mcc: '7392', // consulting services
+      product_description: 'Freelance software development milestone payouts',
     },
-    configuration: {
-      recipient: {
-        capabilities: {
-          stripe_balance: {
-            stripe_transfers: { requested: true },
-          },
-        },
-      },
+    capabilities: {
+      transfers: { requested: true },
     },
-    defaults: {
-      currency: 'usd',
-      responsibilities: {
-        fees_collector: 'stripe',
-        losses_collector: 'stripe',
-      },
+    controller: {
+      stripe_dashboard: { type: 'express' },
+      fees: { payer: 'application' },
+      losses: { payments: 'application' },
+      requirement_collection: 'stripe',
     },
   });
 
@@ -31,16 +25,11 @@ export async function createRecipientAccount(email: string, displayName: string)
 }
 
 export async function createOnboardingLink(accountId: string, returnUrl: string, refreshUrl: string) {
-  const link = await stripe.v2.core.accountLinks.create({
+  const link = await stripe.accountLinks.create({
     account: accountId,
-    use_case: {
-      type: 'account_onboarding',
-      account_onboarding: {
-        configurations: ['recipient'],
-        return_url: returnUrl,
-        refresh_url: refreshUrl,
-      },
-    },
+    type: 'account_onboarding',
+    return_url: returnUrl,
+    refresh_url: refreshUrl,
   });
 
   return link;
